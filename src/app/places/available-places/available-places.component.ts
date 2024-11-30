@@ -44,9 +44,10 @@ export class AvailablePlacesComponent {
       subscription.unsubscribe();
     })
   }
+
   onSelectedPlace(selectedPlace: Place) {
 
-    const subscription = this.placesService.addPlaceToUserPlaces(selectedPlace.id)
+    const subscription = this.placesService.addPlaceToUserPlaces(selectedPlace)
       .subscribe({
         next: (resData) => console.log(resData)
       });
