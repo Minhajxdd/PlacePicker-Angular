@@ -1,10 +1,11 @@
-import {Component, DestroyRef, inject, signal} from '@angular/core';
-import  { map } from 'rxjs'
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { catchError, map, throwError } from 'rxjs'
 
 import { Place } from '../place.model';
 import { PlacesComponent } from '../places.component';
 import { PlacesContainerComponent } from '../places-container/places-container.component';
-import {HttpClient} from "@angular/common/http";
+import { HttpClient } from "@angular/common/http";
+import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-available-places',
@@ -13,24 +14,46 @@ import {HttpClient} from "@angular/common/http";
   styleUrl: './available-places.component.css',
   imports: [PlacesComponent, PlacesContainerComponent],
 })
-export class AvailablePlacesComponent{
+export class AvailablePlacesComponent {
   places = signal<Place[] | undefined>(undefined);
-  private httpClient = inject(HttpClient);
+  isFetching = signal(false);
+  error = signal('');
+
+  private placesService = inject(PlacesService)
   private destoryRef = inject(DestroyRef);
 
   ngOnInit() {
-    const subscription = this.httpClient.get<{ places: Place[ ] }>(`http://localhost:3000/places`)
-      .pipe(
-        map((resData) => resData.places)
-      )
-      .subscribe({
-      next: places => {
-        this.places.set(places);
-      }
-    })
+    this.isFetching.set(true);
+    const subscription =
+      this.placesService
+        .loadAvailablePlaces()
+        .subscribe({
+          next: places => {
+            this.places.set(places);
+          },
+          error: (err: Error) => {
+            console.log(err);
+            this.error.set(err.message);
+          },
+          complete: () => {
+            this.isFetching.set(false);
+          }
+        })
 
     this.destoryRef.onDestroy(() => {
       subscription.unsubscribe();
     })
   }
+  onSelectedPlace(selectedPlace: Place) {
+
+    const subscription = this.placesService.addPlaceToUserPlaces(selectedPlace.id)
+      .subscribe({
+        next: (resData) => console.log(resData)
+      });
+
+    this.destoryRef.onDestroy(() => {
+      subscription.unsubscribe();
+    })
+  }
+
 }
